@@ -10,7 +10,8 @@ import json
 import re
 from deta import Deta
 from streamlit_extras.grid import grid
-# import environ
+from dotenv import load_dotenv
+import os
 
 
 #Необходимый модуль для проверки правописания
@@ -31,12 +32,12 @@ st.markdown("""
 <style>div[data-testid="stToolbar"] { display: none;}</style>
 """, unsafe_allow_html=True)
 
-#база данных приложения
-# env = environ.Env()
-# environ.Env.read_env()
 
-base_key = "c03jv3hc1sq_xXhXWPVcKULDSaBXbwjaWJS3Qx4JacXV"
-# base_key = env('DATABASE_KEY')
+load_dotenv()
+
+#база данных приложения
+
+base_key = os.getenv('DATABASE_KEY')
 deta = Deta(base_key)
 database = deta.Base("users")
 
@@ -156,7 +157,6 @@ with st.sidebar:
                 if database.get(token) != None:
 
                     key_is_provided = True
-                    # st.toast("Вы успешно авторизированы!", icon="✨")
                     return key_is_provided
                 else:
                     key_is_provided = False
@@ -172,7 +172,7 @@ with st.sidebar:
                 st.session_state.gens_number = data["gens_number"]
 
             else:
-                    st.warning("Ключ доступа недействителен либо введен неверно")
+                    st.warning("Ключ доступа недействителен, либо введён неверно")
         else:
             st.session_state.key_is_provided = False
     else:
@@ -182,7 +182,6 @@ main_grid_1 = grid([5, 4.5, 2])
 main_grid = grid([2, 4.5, 2])
 
 main_grid_1.write("")
-# main_grid_1.title("📚 LexisGen", anchor=False)
 main_grid_1.title(" LexisGen", anchor=False)
 main_grid_1.write("")
 
@@ -196,7 +195,7 @@ with main_grid.container():
         if "keywords" not in st.session_state:
             st.session_state.keywords = []
 
-        text, maxtags = ('Нажмине Enter, чтобы добавить слово', 8)
+        text, maxtags = ('Нажмите Enter, чтобы добавить слово', 8)
 
         st.subheader("Введите слова:", anchor=False)
 
@@ -411,7 +410,8 @@ with main_grid.container():
                 st.warning("Пожалуйста, введите ключ доступа", icon="🔑")
 
     if st.session_state.show_submit_form:
-        st.info('Заполните пропуски в предложениях правильной формой слова из спика выше.')
+        # st.info('Заполните пропуски в предложениях ниже правильной формой слова из спика выше.')
+        st.info('Введенными словами заполните пропуски в предложениях ниже.')
 
         with st.form("my_form"):
 
@@ -444,7 +444,7 @@ with main_grid.container():
         with st.expander("Ответы"):
             for i in range(st.session_state.number_of_sentenses):
                 st.write(st.session_state.formated_responses[i][0].replace("[G_A_P]", f":blue[{st.session_state.answers[i]}]"))
-        st.write(st.session_state.tokens)
+        # st.write(st.session_state.tokens)
 
 
 main_grid.write("")
@@ -489,6 +489,6 @@ with st.sidebar:
     st.write("")
 
 
-    st.link_button("⚡ Получить доступ", "https://vk.com/lexisgen",)
-    st.link_button("🔗 Сообщество в ВК", "https://vk.com/lexisgen",)
-    st.link_button("⚙️ Тех. поддержка &nbsp; &nbsp;", "https://vk.com/lostconcepts",)
+    st.link_button("⚡ Получить доступ", "https://vk.com/@lexisgen-kak-poluchit-dostup")
+    st.link_button("🔗 Сообщество в ВК", "https://vk.com/lexisgen")
+    st.link_button("⚙️ Тех. поддержка &nbsp; &nbsp;", "https://vk.com/lostconcepts")
