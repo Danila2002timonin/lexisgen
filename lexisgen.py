@@ -1,6 +1,5 @@
 import streamlit as st
 from gpt import bot
-from bestcomponentever import input_field
 from streamlit_tags import st_tags
 from sentence_formation import word_formater
 import random
@@ -12,6 +11,7 @@ from deta import Deta
 from streamlit_extras.grid import grid
 from dotenv import load_dotenv
 import os
+from input_field_component import input_field
 
 
 #Необходимый модуль для проверки правописания
