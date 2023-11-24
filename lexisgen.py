@@ -23,13 +23,16 @@ spell = SpellChecker()
 
 st.set_page_config(
     page_title="LexisGen",
-    page_icon="",
+    page_icon="📚",
     layout="wide",
     initial_sidebar_state="auto"
 )
 
 st.markdown("""
-<style>div[data-testid="stToolbar"] { display: none;}</style>
+<style>
+    div[data-testid="stToolbar"] { display: none;}
+    footer {visibility: hidden;}
+</style>
 """, unsafe_allow_html=True)
 
 
