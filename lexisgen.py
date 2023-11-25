@@ -12,6 +12,7 @@ from streamlit_extras.grid import grid
 from dotenv import load_dotenv
 import os
 from input_field_component import input_field
+from better_profanity import profanity
 
 
 #Необходимый модуль для проверки правописания
@@ -150,6 +151,30 @@ if "initial_values" not in st.session_state:
 if "acsses_key" not in st.session_state:
     st.session_state.acsses_key = ""
 
+if "swearword" not in st.session_state:
+    st.session_state.swearword = ""
+
+if "suggestion" not in st.session_state:
+    st.session_state.suggestion = ""
+
+if "wordnotexist" not in st.session_state:
+    st.session_state.wordnotexist = ""
+
+if "notenought" not in st.session_state:
+    st.session_state.notenought = ""
+
+if "impossibleword" not in st.session_state:
+    st.session_state.impossibleword = ""
+
+if "propriate_spell" not in st.session_state:
+    st.session_state.propriate_spell = True
+
+if "propriate_length" not in st.session_state:
+    st.session_state.propriate_length = True
+
+if "profanity" not in st.session_state:
+    st.session_state.profanity = False
+
 with st.sidebar:
 
 
@@ -181,16 +206,14 @@ with st.sidebar:
     else:
         st.session_state.key_is_provided = False
 
-main_grid_1 = grid([5, 4.5, 2])
 main_grid = grid([2, 4.5, 2])
-
-main_grid_1.write("")
-main_grid_1.title(" LexisGen", anchor=False)
-main_grid_1.write("")
 
 main_grid.write("")
 
 with main_grid.container():
+
+    st.markdown('<h1 style="text-align:center">LexisGen</h1>', unsafe_allow_html=True)
+
     st.write("")
     st.write("")
 
@@ -207,6 +230,7 @@ with main_grid.container():
 
             st.session_state.propriate_spell = True
             st.session_state.propriate_length = True
+            st.session_state.profanity = False
 
         #основная логика программы
         if st.form_submit_button("Сгенерировать"):
@@ -219,7 +243,9 @@ with main_grid.container():
                     st.session_state.check_language = True
                 else:
                     st.session_state.check_language = False
-                    st.session_state.error_item = item
+                    st.session_state.input_item = item
+
+                    break
 
                 # проверка корректности введеного слова 
                 # Если слово написано неверно, то предложить исправленный вариант, если вариантов нет - указать, что такого слова не существует
@@ -234,12 +260,23 @@ with main_grid.container():
                             i = temp.index(w)
                             temp[i] = spell.correction(w)
                     
-                        st.session_state.error_item = " ".join(temp)
-                        st.session_state.input_item = item
+                        st.session_state.wordnotexist = item
+                        st.session_state.suggestion = " ".join(temp)
+
+                        break
                 except:
                     st.session_state.propriate_spell = "impossible_word"
-                    st.session_state.input_item = item
+                    st.session_state.impossibleword = item
 
+                    break
+
+
+                # проверка на морально-этическое соответсвие
+
+                if profanity.contains_profanity(item.lower()):
+                    st.session_state.profanity = True
+                    st.session_state.swearword = item
+                    break
                 #проверка, является ли введенный текст словочетанием или отдельным словом
 
                 if len(item.split()) > 1:
@@ -253,31 +290,22 @@ with main_grid.container():
                         st.session_state.propriate_length = False
                         st.session_state.error_item = item
 
+                        break
+
                 #проверка на отношение Только к списку стоп-слов
 
                 if item.lower().strip() in st.session_state.stop_words:
                     st.session_state.not_in_sw = False
-                    st.session_state.error_item = item
+                    st.session_state.notenought = item
+
+                    break
                 else:
                     st.session_state.not_in_sw = True
 
-                if st.session_state.propriate_length and st.session_state.propriate_spell == True and st.session_state.check_language and st.session_state.not_in_sw and len(st.session_state.keywords) >= 2 and st.session_state.gens_number > 0:
-                    st.session_state.allow_generation = True
-                else:
-                    if st.session_state.gens_number == 0:
-                        st.session_state.allow_generation = False
-                    if len(st.session_state.keywords) <= 2:
-                        st.session_state.allow_generation = False
-                    if st.session_state.propriate_length == False:
-                        st.session_state.allow_generation = False
-                    if st.session_state.check_language == False:
-                        st.session_state.allow_generation = False
-                    if st.session_state.propriate_spell == "impossible_word" and st.session_state.check_language:
-                        st.session_state.allow_generation = False
-                    if st.session_state.propriate_spell == False:
-                        st.session_state.allow_generation = False
-                    if st.session_state.not_in_sw == False:
-                        st.session_state.allow_generation = False
+            if st.session_state.propriate_length and st.session_state.propriate_spell == True and st.session_state.check_language and st.session_state.not_in_sw and len(st.session_state.keywords) >= 2 and st.session_state.gens_number > 0 and not st.session_state.profanity:
+                st.session_state.allow_generation = True
+            else:
+                st.session_state.allow_generation = False
 
             if st.session_state.key_is_provided:
                 if st.session_state.allow_generation:
@@ -292,6 +320,11 @@ with main_grid.container():
                     st.session_state.results = ""
                     st.session_state.error_item = ""
                     st.session_state.input_item = ""
+                    st.session_state.suggestion = ""
+                    st.session_state.wordnotexist = ""
+                    st.session_state.impossibleword = ""
+                    st.session_state.swearword = ""
+                    st.session_state.notenought = ""
 
                     prompt = ""
                     for i in range(len(st.session_state.keywords)):
@@ -396,19 +429,21 @@ with main_grid.container():
                 else:
 
                     if st.session_state.gens_number == 0:
-                        st.warning("К сожалению, число генераций исчерпано, обратитесь к представителю LexisGen, чтобы пополнить его", icon="😔")
+                        st.warning(" &nbsp; К сожалению, число генераций исчерпано, обратитесь к представителю LexisGen, чтобы пополнить его", icon="😔")
                     if len(st.session_state.keywords) < 2:
-                        st.warning("  Пожалуйста, введите хотя бы 2 слова для генерации задания", icon="🙊")
+                        st.warning(" &nbsp; Пожалуйста, введите хотя бы 2 слова для генерации задания", icon="🙊")
                     if st.session_state.propriate_length == False:
-                        st.warning(f'  "{st.session_state.error_item}" относится к категории словосочетаний, фраз или идиом. К сожалению, пока доступна генерация на основе только отдельных слов.', icon="⚠️")
+                        st.warning(f'  &nbsp; "{st.session_state.error_item}" относится к категории словосочетаний, фраз или идиом. К сожалению, пока доступна генерация на основе только отдельных слов.', icon="⚠️")
                     if st.session_state.check_language == False:
-                        st.info(f'  "{st.session_state.input_item}" не является словом, относящимся к Английскому языку', icon="🌐")
+                        st.info(f' &nbsp; "{st.session_state.input_item}" не является словом, относящимся к Английскому языку', icon="🌐")
                     if st.session_state.propriate_spell == "impossible_word" and st.session_state.check_language:
-                        st.warning(f'  Нейронная сеть не смогла догадаться, что Вы имели в виду под "{st.session_state.input_item}"...', icon="😢")
+                        st.warning(f' &nbsp; Нейронная сеть не смогла догадаться, что Вы имели в виду под "{st.session_state.impossibleword}"...', icon="😢")
                     if st.session_state.propriate_spell == False:
-                        st.warning(f'   Слова "{st.session_state.input_item}" не существует. Возможно, Вы имели в виду "{st.session_state.error_item}"?', icon="⚠️")
+                        st.warning(f'  &nbsp; Слова "{st.session_state.wordnotexist}" не существует. Возможно, Вы имели в виду "{st.session_state.suggestion}"?', icon="⚠️")
                     if st.session_state.not_in_sw == False:
-                        st.warning(f'   Только "{st.session_state.error_item}" недостаточно для генерации полноценного предложения...', icon="😕")
+                        st.warning(f'  &nbsp; Только "{st.session_state.notenought}" недостаточно для генерации полноценного предложения...', icon="😕")
+                    if st.session_state.profanity:
+                        st.warning(f' &nbsp; "{st.session_state.swearword}" - неоднозначная или оскорбительная лексика недопустима!', icon='😶')
             else:
                 st.warning("Пожалуйста, введите ключ доступа", icon="🔑")
 
@@ -446,7 +481,10 @@ with main_grid.container():
 
         with st.expander("Ответы"):
             for i in range(st.session_state.number_of_sentenses):
-                st.write(st.session_state.formated_responses[i][0].replace("[G_A_P]", f":blue[{st.session_state.answers[i]}]"))
+                try:
+                    st.write(st.session_state.formated_responses[i][0].replace("[G_A_P]", f":blue[{st.session_state.answers[i]}]"))
+                except:
+                    pass
         # st.write(st.session_state.tokens)
 
 
