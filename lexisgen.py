@@ -470,7 +470,7 @@ with main_grid.container():
                     st.session_state.results = ""
                     for i in range(len(st.session_state.user_answers)):
                         if len(st.session_state.user_answers[i]) != 0:
-                            if st.session_state.user_answers[i][0].lower() == st.session_state.answers[i].lower():
+                            if st.session_state.user_answers[i][0].lower().strip() == st.session_state.answers[i].lower().strip():
                                 st.session_state.results += f" ✔️ :green[{st.session_state.answers[i].lower()}]"
                             elif len(st.session_state.user_answers[i][0].strip()) > 0:
                                 st.session_state.results += f" ❌ :red[{st.session_state.user_answers[i][0].lower()}]"
