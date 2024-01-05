@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 import os
 from input_field_component import input_field
 from better_profanity import profanity
+from check_existence import exist
 
 
 #Необходимый модуль для проверки правописания
@@ -65,10 +66,20 @@ nlp = load_dictionary("en_core_web_sm")
 
 #Определение констант, флагов и коллекций данных
 main_prompt = '''You are provided with a list of words and contexts, and you should generate a list of sentences at elementary English level, where the mentioned words are used in the appropriate context. When making sentences, follow these requirements:
-1. Form of these words remain unchanged.
+1. Leave the forms and tenses of the words unchenged.
 2. You have to provide only one sentence for each word and nothing else.
 3. These words are not replaced with synonyms.
 4. Each sentence must contain at least 20 words.'''
+
+context_promt = '''You provided with a list of words and phrases. For each word or phras from the list create new list of 10 contexts where that word or phrase can be used, do not add examples and any notes, provide only lists with names of contexts, describe each context with single word
+Generate list in the certain way:
+
+1. first word:
+-context
+-context\n\n
+2. second word:
+-context
+-context'''
 
 if "define_initial_values" not in st.session_state:
     st.session_state.define_initial_values = True
@@ -76,11 +87,14 @@ if "define_initial_values" not in st.session_state:
 if "data" not in st.session_state:
     st.session_state.data = [{"role": "system", "content": main_prompt}]
 
+if "context_data" not in st.session_state:
+    st.session_state.context_data = [{"role": "system", "content": context_promt}]
+
 if "level" not in st.session_state:
     st.session_state.level = "middle"
 
 if "stop_words" not in st.session_state:
-    st.session_state.stop_words = ["a", "an", "the", "to", "be", "being", "have", "having", "has", "been", "was", "were", "will", "could", "would", "may", "might", "ought", "by", "at", "as", "on", "for", "is", "are", "of", "in", "did", "does", "didn't", "doesn't", "about", "into", "around", "couldn't", "wasn't", "weren't", "won't", "not"]
+    st.session_state.stop_words = ["a", "an", "the", "to", "be", "being", "have", "having", "has", "been", "was", "were", "will", "could", "would", "may", "might", "ought", "by", "at", "as", "on", "for", "is", "are", "of", "in", "did", "does", "didn't", "doesn't", "about", "into", "around", "couldn't", "wasn't", "weren't", "won't", "not", "can", "can't"]
 
 if "propriate_length" not in st.session_state:
     st.session_state.propriate_length = True
@@ -234,78 +248,79 @@ with main_grid.container():
 
         #основная логика программы
         if st.form_submit_button("Сгенерировать"):
-            for item in st.session_state.keywords:
+            with st.spinner('Проверка корректности введённых слов...'):
+                for item in st.session_state.keywords:
 
-                #проверка, относится ли слово к английскому языку
+                    #проверка, относится ли слово к английскому языку
 
-                reg = re.compile(r'[a-zA-Z]')
-                if reg.match(item.lower()):
-                    st.session_state.check_language = True
-                else:
-                    st.session_state.check_language = False
-                    st.session_state.input_item = item
-
-                    break
-
-                # проверка корректности введеного слова 
-                # Если слово написано неверно, то предложить исправленный вариант, если вариантов нет - указать, что такого слова не существует
-
-                try:
-                    temp = item.lower().replace('-', " ")
-                    temp = temp.split()
-                    misspelled = spell.unknown(temp)
-                    if len(misspelled) > 0:
-                        st.session_state.propriate_spell = False
-                        for w in misspelled:
-                            i = temp.index(w)
-                            temp[i] = spell.correction(w)
-                    
-                        st.session_state.wordnotexist = item
-                        st.session_state.suggestion = " ".join(temp)
+                    reg = re.compile(r'[a-zA-Z]')
+                    if reg.match(item.lower()):
+                        st.session_state.check_language = True
+                    else:
+                        st.session_state.check_language = False
+                        st.session_state.input_item = item
 
                         break
-                except:
-                    st.session_state.propriate_spell = "impossible_word"
-                    st.session_state.impossibleword = item
 
-                    break
+                    # проверка корректности введеного слова 
+                    # Если слово написано неверно, то предложить исправленный вариант, если вариантов нет - указать, что такого слова не существует
+
+                    try:
+                        temp = item.lower().replace('-', " ")
+                        temp = temp.split()
+                        misspelled = spell.unknown(temp)
+
+                        for element in item.lower().strip().split():
+                            if not exist(element):
+                                st.session_state.propriate_spell = False
+                                for w in misspelled:
+                                    i = temp.index(w)
+                                    temp[i] = spell.correction(w)
+                            
+                                st.session_state.wordnotexist = item
+                                st.session_state.suggestion = " ".join(temp)
+                                break
+                    except:
+                        st.session_state.propriate_spell = "impossible_word"
+                        st.session_state.impossibleword = item
+
+                        break
 
 
-                # проверка на морально-этическое соответсвие
+                    # проверка на морально-этическое соответсвие
 
-                if profanity.contains_profanity(item.lower()):
-                    st.session_state.profanity = True
-                    st.session_state.swearword = item
-                    break
-                #проверка, является ли введенный текст словочетанием или отдельным словом
+                    if profanity.contains_profanity(item.lower()):
+                        st.session_state.profanity = True
+                        st.session_state.swearword = item
+                        break
+                    #проверка, является ли введенный текст словочетанием или отдельным словом
 
-                if len(item.split()) > 1:
-                    t = 0
-                    for w in item.split():
-                        if w.lower() in st.session_state.stop_words:
-                            continue
+                    if len(item.split()) > 1:
+                        t = 0
+                        for w in item.split():
+                            if w.lower() in st.session_state.stop_words:
+                                continue
+                            else:
+                                t += 1
+                        if t > 1:
+                            st.session_state.propriate_length = False
+                            st.session_state.error_item = item
+
+                            break
+
+                    #проверка на отношение Только к списку стоп-слов
+                    for element in item.lower().strip().split():
+                        if element not in st.session_state.stop_words:
+                            st.session_state.not_in_sw = True
+                            break
                         else:
-                            t += 1
-                    if t > 1:
-                        st.session_state.propriate_length = False
-                        st.session_state.error_item = item
+                            st.session_state.not_in_sw = False
+                            st.session_state.notenought = item
 
-                        break
-
-                #проверка на отношение Только к списку стоп-слов
-
-                if item.lower().strip() in st.session_state.stop_words:
-                    st.session_state.not_in_sw = False
-                    st.session_state.notenought = item
-
-                    break
+                if st.session_state.propriate_length and st.session_state.propriate_spell == True and st.session_state.check_language and st.session_state.not_in_sw and len(st.session_state.keywords) >= 2 and st.session_state.gens_number > 0 and not st.session_state.profanity:
+                    st.session_state.allow_generation = True
                 else:
-                    st.session_state.not_in_sw = True
-
-            if st.session_state.propriate_length and st.session_state.propriate_spell == True and st.session_state.check_language and st.session_state.not_in_sw and len(st.session_state.keywords) >= 2 and st.session_state.gens_number > 0 and not st.session_state.profanity:
-                st.session_state.allow_generation = True
-            else:
-                st.session_state.allow_generation = False
+                    st.session_state.allow_generation = False
 
             if st.session_state.key_is_provided:
                 if st.session_state.allow_generation:
@@ -317,6 +332,7 @@ with main_grid.container():
                     st.session_state.url_q = 0
                     st.session_state.check_answers = False
                     st.session_state.data = [{"role": "system", "content": main_prompt}]
+                    st.session_state.context_data = [{"role": "system", "content": context_promt}]
                     st.session_state.results = ""
                     st.session_state.error_item = ""
                     st.session_state.input_item = ""
@@ -325,20 +341,41 @@ with main_grid.container():
                     st.session_state.impossibleword = ""
                     st.session_state.swearword = ""
                     st.session_state.notenought = ""
+                    st.session_state.tokens = 0
 
-                    prompt = ""
+                    prompt_contx = ""
                     for i in range(len(st.session_state.keywords)):
+                        prompt_contx = prompt_contx + " " + f"{i+1}." + " " + st.session_state.keywords[i].lower().strip()
 
-                        # prompts = {"middle": f'''{i  + 1}.Make up a sentence at elementary English level with the word "{st.session_state.keywords[i].lower()}". Add the context of {contexts[str(random.randint(0, 515))].lower()}. The sentence lenght must be up to 26 words. Do not change the initial form of "{st.session_state.keywords[i].lower()}".'''}
-                        prompts = {"middle": f'''{i  + 1}. Word - {st.session_state.keywords[i].lower()}, context - {contexts[str(random.randint(0, 515))].lower()}.'''}
-                        prompt += prompts[st.session_state.level]+"\n"
+                    st.session_state.context_data.append({"role": "user", "content": prompt_contx})
 
-                    
-                    # time.sleep(2)
-                    st.session_state.data.append({"role": "user", "content": prompt})
 
                     try:
                         with st.spinner('Генерация упражнения...'):
+
+                            url = "https://api.theb.ai/v1/chat/completions"
+                            res = bot(st.session_state.context_data, url, st.session_state.acsses_key, 1)
+
+                            response = res[0]
+                            st.session_state.tokens += res[1]
+                            st.session_state.context_data.append({"role": "assistant", "content": response})
+
+                            main_text = response.split("\n\n")
+                            words_with_contexts = []
+
+                            for i in range(len(main_text)):
+                                contexts1 = main_text[i].split("\n-")[1:]
+                                words_with_contexts.append(contexts1)
+
+                            prompt = ""
+                            for i in range(len(st.session_state.keywords)):
+
+                                # prompts = {"middle": f'''{i  + 1}.Make up a sentence at elementary English level with the word "{st.session_state.keywords[i].lower()}". Add the context of {contexts[str(random.randint(0, 515))].lower()}. The sentence lenght must be up to 26 words. Do not change the initial form of "{st.session_state.keywords[i].lower()}".'''}
+                                prompts = {"middle": f'''{i  + 1}. Word - {st.session_state.keywords[i].lower()}, context - {words_with_contexts[i][random.randint(0, len(words_with_contexts[i])-1)].lower()}.'''}
+                                prompt += prompts[st.session_state.level]+"\n"
+
+                            st.session_state.data.append({"role": "user", "content": prompt})
+
                             url = "https://api.theb.ai/v1/chat/completions"
                             res = bot(st.session_state.data, url, st.session_state.acsses_key, 1)
 
@@ -383,6 +420,30 @@ with main_grid.container():
                     except:
                         try:
                             with st.spinner("Генерация упражнения..."):
+
+                                url = "https://api.baizhi.ai/v1/chat/completions"
+                                res = bot(st.session_state.context_data, url, st.session_state.acsses_key, 1)
+
+                                response = res[0]
+                                st.session_state.tokens += res[1]
+                                st.session_state.context_data.append({"role": "assistant", "content": response})
+
+                                main_text = response.split("\n\n")
+                                words_with_contexts = []
+
+                                for i in range(len(main_text)):
+                                    contexts1 = main_text[i].split("\n-")[1:]
+                                    words_with_contexts.append(contexts1)
+
+                                prompt = ""
+                                for i in range(len(st.session_state.keywords)):
+
+                                    # prompts = {"middle": f'''{i  + 1}.Make up a sentence at elementary English level with the word "{st.session_state.keywords[i].lower()}". Add the context of {contexts[str(random.randint(0, 515))].lower()}. The sentence lenght must be up to 26 words. Do not change the initial form of "{st.session_state.keywords[i].lower()}".'''}
+                                    prompts = {"middle": f'''{i  + 1}. Word - {st.session_state.keywords[i].lower()}, context - {words_with_contexts[i][random.randint(0, len(words_with_contexts[i])-1)].lower()}.'''}
+                                    prompt += prompts[st.session_state.level]+"\n"
+
+                                st.session_state.data.append({"role": "user", "content": prompt})
+
                                 url = "https://api.baizhi.ai/v1/chat/completions"
                                 res = bot(st.session_state.data, url, st.session_state.acsses_key, 1)
                         
@@ -443,7 +504,7 @@ with main_grid.container():
                     if st.session_state.not_in_sw == False:
                         st.warning(f'  &nbsp; Только "{st.session_state.notenought}" недостаточно для генерации полноценного предложения...', icon="😕")
                     if st.session_state.profanity:
-                        st.warning(f' &nbsp; "{st.session_state.swearword}" - неоднозначная или оскорбительная лексика недопустима!', icon='😶')
+                        st.warning(f' &nbsp; Слово "{st.session_state.swearword}" - неоднозначная или нецензурная лексика!', icon='😶')
             else:
                 st.warning("Пожалуйста, введите ключ доступа", icon="🔑")
 
@@ -460,7 +521,7 @@ with main_grid.container():
             
             for i in range(st.session_state.number_of_sentenses):
                 try:
-                    time.sleep(0.15)
+                    # time.sleep(0.15)
                     st.session_state.user_answers[i] = input_field(st.session_state.formated_responses[i][0], key=st.session_state.unique_key + i)
                 except:
                     pass

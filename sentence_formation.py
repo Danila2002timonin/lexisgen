@@ -5,7 +5,7 @@ from spellchecker import SpellChecker
 
 spell = SpellChecker()
 nlp = spacy.load("en_core_web_sm")
-stop_words = ["a", "an", "the", "to", "be", "being", "have", "having", "has", "been", "was", "were", "will", "could", "would", "may", "might", "ought", "by", "at", "as", "on", "for", "is", "are", "of", "in", "did", "does", "didn't", "doesn't", "about", "into", "around", "couldn't", "wasn't", "weren't", "won't", "not"]
+stop_words = ["a", "an", "the", "to", "be", "being", "have", "having", "has", "been", "was", "were", "will", "could", "would", "may", "might", "ought", "by", "at", "as", "on", "for", "is", "are", "of", "in", "did", "does", "didn't", "doesn't", "about", "into", "around", "couldn't", "wasn't", "weren't", "won't", "not", "can", "can't"]
 
 
 def single_word_formater(word, sentence):
@@ -58,10 +58,13 @@ def word_formater(word, sentence):
   
   try:
     for i in range(len(formated_sentence)):
-      if (formated_sentence[i] == word.lower()) or (word.lower() in formated_sentence[i]):
+      if formated_sentence[i] == word.lower():
           index = i
           break
-        
+      elif word.lower() in formated_sentence[i]:
+          index = i
+          break
+      
     gap_sentence = sentence.split()
     gap_sentence[index] = gap_sentence[index].lower().replace(formated_sentence[index], "[G_A_P]")
     gap_sentence = " ".join(gap_sentence[1:])
