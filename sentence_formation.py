@@ -61,9 +61,11 @@ def word_formater(word, sentence):
       if formated_sentence[i] == word.lower():
           index = i
           break
-      elif word.lower() in formated_sentence[i]:
-          index = i
-          break
+    else:
+      for i in range(len(formated_sentence)):
+        if word.lower() in formated_sentence[i]:
+            index = i
+            break
       
     gap_sentence = sentence.split()
     gap_sentence[index] = gap_sentence[index].lower().replace(formated_sentence[index], "[G_A_P]")
