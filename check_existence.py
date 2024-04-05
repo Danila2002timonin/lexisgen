@@ -12,7 +12,7 @@ def exist(word):
         src = req.text
         soup = BeautifulSoup(src, "lxml")
 
-        data = soup.find_all(class_="E17D6zMGNMyhZ9DoRo9R")
+        data = soup.find_all(class_="hp91nlVaykGzCu7JxmyY")
         for element in data:
             if "no results found" in element.text.lower():
                 return False
