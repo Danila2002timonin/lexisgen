@@ -1,7 +1,7 @@
 import streamlit as st
 from gpt import bot
 from streamlit_tags import st_tags
-from sentence_formation import word_formater
+from sentence_formation import word_formater, multiple_word_formater
 import random
 import time
 import spacy
@@ -94,10 +94,10 @@ if "level" not in st.session_state:
     st.session_state.level = "middle"
 
 if "stop_words" not in st.session_state:
-    st.session_state.stop_words = ["a", "an", "the", "to", "be", "being", "have", "having", "has", "been", "was", "were", "will", "could", "would", "may", "might", "ought", "by", "at", "as", "on", "for", "is", "are", "of", "in", "did", "does", "didn't", "doesn't", "about", "into", "around", "couldn't", "wasn't", "weren't", "won't", "not", "can", "can't"]
+    st.session_state.stop_words = ["a", "an", "not", "someone", "something", "somewhere", "to", "am", "are", "is", "the", "someones", "ones", "someone's", "one's"]
 
-if "propriate_length" not in st.session_state:
-    st.session_state.propriate_length = True
+if "stop_words_v2" not in st.session_state:
+    st.session_state.stop_words_v2 = ["a", "an", "to", "the"]
 
 if "propriate_spell" not in st.session_state:
     st.session_state.propriate_spell = True
@@ -189,6 +189,12 @@ if "propriate_length" not in st.session_state:
 if "profanity" not in st.session_state:
     st.session_state.profanity = False
 
+if "max_phrase_lenght" not in st.session_state:
+    st.session_state.max_phrase_lenght = True
+
+if "too_long_item" not in st.session_state:
+    st.session_state.too_long_item = ""
+
 with st.sidebar:
 
 
@@ -235,16 +241,17 @@ with main_grid.container():
         if "keywords" not in st.session_state:
             st.session_state.keywords = []
 
-        text, maxtags = ('Нажмите Enter, чтобы добавить слово', 8)
+        text, maxtags = ('Нажмите Enter, чтобы добавить', 8)
 
-        st.subheader("Введите слова:", anchor=False)
+        # st.subheader("Введите слова:", anchor=False)
+        st.info(' &nbsp; Чтобы создать упражнение, введите слова или словосочетания в поле ниже и нажмите "Сгенерировать"', icon="🌌")
 
         if keywords := st_tags(label="", text=text, value=[], maxtags = 8, key='keyword'): 
             st.session_state.keywords = keywords
 
             st.session_state.propriate_spell = True
-            st.session_state.propriate_length = True
             st.session_state.profanity = False
+            st.session_state.max_phrase_lenght = True
 
         #основная логика программы
         if st.form_submit_button("Сгенерировать"):
@@ -266,6 +273,12 @@ with main_grid.container():
                     # Если слово написано неверно, то предложить исправленный вариант, если вариантов нет - указать, что такого слова не существует
 
                     try:
+                        item = item.lower().replace("someone's", "someone")
+                        item = item.lower().replace("one's", "one")
+
+                        item = item.lower().replace("someone’s", "someone")
+                        item = item.lower().replace("one’s", "one")
+
                         temp = item.lower().replace('-', " ")
                         temp = temp.split()
                         misspelled = spell.unknown(temp)
@@ -299,12 +312,13 @@ with main_grid.container():
                         t = 0
                         for w in item.split():
                             if w.lower() in st.session_state.stop_words:
+                                st.session_state.propriate_length = True
                                 continue
                             else:
                                 t += 1
-                        if t > 1:
-                            st.session_state.propriate_length = False
-                            st.session_state.error_item = item
+                        if t > 5:
+                            st.session_state.max_phrase_lenght = False
+                            st.session_state.too_long_item = item
 
                             break
 
@@ -317,7 +331,7 @@ with main_grid.container():
                             st.session_state.not_in_sw = False
                             st.session_state.notenought = item
 
-                if st.session_state.propriate_length and st.session_state.propriate_spell == True and st.session_state.check_language and st.session_state.not_in_sw and len(st.session_state.keywords) >= 2 and st.session_state.gens_number > 0 and not st.session_state.profanity:
+                if st.session_state.max_phrase_lenght and st.session_state.propriate_spell == True and st.session_state.check_language and st.session_state.not_in_sw and len(st.session_state.keywords) >= 2 and st.session_state.gens_number > 0 and not st.session_state.profanity:
                     st.session_state.allow_generation = True
                 else:
                     st.session_state.allow_generation = False
@@ -394,13 +408,25 @@ with main_grid.container():
                             for i in range(len(st.session_state.keywords)):
 
                                 item = st.session_state.keywords[i]
+
+                                q = 0
+                                data_type = True
+                                for j in item.split():
+                                    if j in st.session_state.stop_words_v2:
+                                        continue
+                                    else:
+                                        q += 1
+                                if q > 1:
+                                    data_type = False
+
                                 sentence = list_of_sentences[i]
 
                                 st.session_state.unique_key += 1
                                 st.session_state.responses.append(list_of_sentences[i])
-                                st.session_state.formated_responses.append([word_formater(item, sentence)[0], word_formater(item, sentence)[2]])
+                                formated_data = multiple_word_formater(item, sentence, data_type)
+                                st.session_state.formated_responses.append([formated_data[0], formated_data[2], formated_data[4], formated_data[1]])
 
-                                if word_formater(item, sentence)[3]:
+                                if formated_data[3]:
                                     pass
                                 else:
                                     status = False
@@ -466,9 +492,9 @@ with main_grid.container():
 
                                     st.session_state.unique_key += 1
                                     st.session_state.responses.append(list_of_sentences[i])
-                                    st.session_state.formated_responses.append([word_formater(item, sentence)[0], word_formater(item, sentence)[2]])
+                                    st.session_state.formated_responses.append([formated_data[0], formated_data[2], formated_data[4], formated_data[1]])
 
-                                    if word_formater(item, sentence)[3]:
+                                    if formated_data[3]:
                                         pass
                                     else:
                                         status = False
@@ -493,24 +519,25 @@ with main_grid.container():
                         st.warning(" &nbsp; К сожалению, число генераций исчерпано, обратитесь к представителю LexisGen, чтобы пополнить его", icon="😔")
                     if len(st.session_state.keywords) < 2:
                         st.warning(" &nbsp; Пожалуйста, введите хотя бы 2 слова для генерации задания", icon="🙊")
-                    if st.session_state.propriate_length == False:
-                        st.warning(f'  &nbsp; "{st.session_state.error_item}" относится к категории словосочетаний, фраз или идиом. К сожалению, пока доступна генерация на основе только отдельных слов.', icon="⚠️")
+                    if st.session_state.max_phrase_lenght == False:
+                        st.warning(f' &nbsp; Выражение "{st.session_state.too_long_item}" превышает допустимую длинну. &nbsp; Пожалуйста, сократите число слов ', icon="😕")
                     if st.session_state.check_language == False:
-                        st.info(f' &nbsp; "{st.session_state.input_item}" не является словом, относящимся к Английскому языку', icon="🌐")
+                        st.warning(f' &nbsp; "{st.session_state.input_item}" содержит слова, не относящиеся к Английскому языку', icon="😑")
                     if st.session_state.propriate_spell == "impossible_word" and st.session_state.check_language:
-                        st.warning(f' &nbsp; Нейронная сеть не смогла догадаться, что Вы имели в виду под "{st.session_state.impossibleword}"...', icon="😢")
+                        st.warning(f' &nbsp; Нейронная сеть не смогла догадаться, что Вы имели в виду под "{st.session_state.impossibleword}"...', icon="😵")
                     if st.session_state.propriate_spell == False:
-                        st.warning(f'  &nbsp; Слова "{st.session_state.wordnotexist}" не существует. Возможно, Вы имели в виду "{st.session_state.suggestion}"?', icon="⚠️")
+                        st.warning(f'  &nbsp; "{st.session_state.wordnotexist}" содержит ошибки. Возможно, Вы имели в виду "{st.session_state.suggestion}"?', icon="⚠️")
                     if st.session_state.not_in_sw == False:
                         st.warning(f'  &nbsp; Только "{st.session_state.notenought}" недостаточно для генерации полноценного предложения...', icon="😕")
                     if st.session_state.profanity:
-                        st.warning(f' &nbsp; Слово "{st.session_state.swearword}" - неоднозначная или нецензурная лексика!', icon='😶')
+                        st.warning(f' &nbsp; "{st.session_state.swearword}" содержит неоднозначную или нецензурную лексику!', icon='😶')
             else:
                 st.warning("Пожалуйста, введите ключ доступа", icon="🔑")
 
     if st.session_state.show_submit_form:
         # st.info('Заполните пропуски в предложениях ниже правильной формой слова из спика выше.')
-        st.info('Введенными словами заполните пропуски в предложениях ниже в правильной форме.')
+        # st.info('Введенными словами заполните пропуски в предложениях ниже в правильной форме.')
+        # st.info('Заполните пропуски в предложениях ниже.')
 
         with st.form("my_form"):
 
@@ -521,8 +548,8 @@ with main_grid.container():
             
             for i in range(st.session_state.number_of_sentenses):
                 try:
-                    # time.sleep(0.15)
                     st.session_state.user_answers[i] = input_field(st.session_state.formated_responses[i][0], key=st.session_state.unique_key + i)
+                    st.session_state.user_answers[i] = " ".join(st.session_state.user_answers[i])
                 except:
                     pass
 
@@ -531,10 +558,10 @@ with main_grid.container():
                     st.session_state.results = ""
                     for i in range(len(st.session_state.user_answers)):
                         if len(st.session_state.user_answers[i]) != 0:
-                            if st.session_state.user_answers[i][0].lower().strip() == st.session_state.answers[i].lower().strip():
-                                st.session_state.results += f" ✔️ :green[{st.session_state.answers[i].lower()}]"
+                            if re.sub(r'[^\-\'\w\s]', '', st.session_state.user_answers[i].lower().strip()) == re.sub(r'[^\-\'\w\s]', '', st.session_state.answers[i].lower().strip()):
+                                st.session_state.results += f" ✔️ :green[{st.session_state.user_answers[i].lower().strip()}]"
                             elif len(st.session_state.user_answers[i][0].strip()) > 0:
-                                st.session_state.results += f" ❌ :red[{st.session_state.user_answers[i][0].lower()}]"
+                                st.session_state.results += f" ❌ :red[{st.session_state.user_answers[i].lower()}]"
 
                     st.write(st.session_state.results)
                 except:
@@ -543,10 +570,23 @@ with main_grid.container():
         with st.expander("Ответы"):
             for i in range(st.session_state.number_of_sentenses):
                 try:
-                    st.write(st.session_state.formated_responses[i][0].replace("[G_A_P]", f":blue[{st.session_state.answers[i]}]"))
+                    correct_sentence = st.session_state.formated_responses[i][2]
+                    correct_sentence = correct_sentence.split()
+                    for item in st.session_state.answers[i].split():
+                        for i in range(len(correct_sentence)):
+                            if correct_sentence[i] == "[G_A_P]":
+                                correct_sentence[i] = f":blue[{item}]"
+                                break
+
+                    correct_sentence = " ".join(correct_sentence)
+                    st.write(correct_sentence)
                 except:
                     pass
-        # st.write(st.session_state.tokens)
+
+        # for i in range(st.session_state.number_of_sentenses):
+        #     st.write(st.session_state.formated_responses[i][3])
+
+
 
 
 main_grid.write("")
