@@ -273,6 +273,7 @@ with main_grid.container():
                     # Если слово написано неверно, то предложить исправленный вариант, если вариантов нет - указать, что такого слова не существует
 
                     try:
+                        check_suggestion = item.lower()
                         item = item.lower().replace("someone's", "someone")
                         item = item.lower().replace("one's", "one")
 
@@ -292,6 +293,8 @@ with main_grid.container():
                             
                                 st.session_state.wordnotexist = item
                                 st.session_state.suggestion = " ".join(temp)
+                                if st.session_state.suggestion.lower() == check_suggestion:
+                                    st.session_state.propriate_spell = True
                                 break
                     except:
                         st.session_state.propriate_spell = "impossible_word"
